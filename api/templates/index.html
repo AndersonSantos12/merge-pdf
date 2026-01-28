@@ -2,6 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Mesclar PDFs</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -27,6 +28,22 @@
       .split-container {
         flex-direction: column;
         gap: 18px;
+      }
+    }
+    @media (max-width: 600px) {
+      .split-panel {
+        min-width: 100%;
+        max-width: 100%;
+        padding: 14px 6px 12px 6px;
+      }
+      .split-container {
+        padding: 0 2vw;
+      }
+      body {
+        font-size: 15px;
+      }
+      input[type="text"], button {
+        font-size: 15px;
       }
     }
     </style>

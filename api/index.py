@@ -13,14 +13,17 @@ ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MERGED_FOLDER'] = MERGED_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(MERGED_FOLDER, exist_ok=True)
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+        # Garante que os diretórios existem apenas quando necessário
+        if request.method == 'POST':
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            os.makedirs(app.config['MERGED_FOLDER'], exist_ok=True)
     if request.method == 'POST':
         files = request.files.getlist('pdfs')
         add_blank = request.form.get('add_blank') == 'on'
