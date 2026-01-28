@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, send_file, redirect, url_for, flash
 from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 import os
@@ -18,7 +19,6 @@ os.makedirs(MERGED_FOLDER, exist_ok=True)
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Única rota para upload, ordenação e mesclagem
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -87,3 +87,5 @@ def index():
                 except Exception:
                     pass
     return render_template('index.html')
+
+# Não inclua bloco if __name__ == '__main__' aqui!
