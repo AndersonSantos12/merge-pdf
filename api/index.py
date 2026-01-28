@@ -73,6 +73,9 @@ def index():
             merger.close()
             return send_file(merged_path, as_attachment=True, download_name=output_name)
         except Exception as e:
+            import traceback
+            tb = traceback.format_exc()
+            print('Erro ao processar arquivos:', tb)
             return f'Erro ao processar arquivos: {str(e)}', 500
         finally:
             # Limpa uploads
