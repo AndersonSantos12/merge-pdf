@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Mesclar PDFs</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <style>
+    .split-container {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: nowrap;
+    }
+    .split-panel {
+      flex: 1 1 320px;
+      min-width: 280px;
+      max-width: 400px;
+      background: #fff;
+      padding: 24px 18px 18px 18px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px #0001;
+    }
+    @media (max-width: 900px) {
+      .split-container {
+        flex-direction: column;
+        gap: 18px;
+      }
+    }
+    </style>
+    <div class="split-container">
+      <div class="split-panel">
+        <h2 style="text-align:center;">1. Upload dos PDFs</h2>
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <ul class="flash">
+            {% for message in messages %}
+              <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+        <form id="upload-form" method="post" enctype="multipart/form-data" onsubmit="return false;">
+          <label for="pdf-input" style="font-weight:bold;">Selecione os arquivos PDF:</label>
+          <input type="file" name="pdfs" multiple accept="application/pdf" id="pdf-input">
+          <div style="margin: 12px 0 18px 0;">
+            <input type="checkbox" id="add-blank" name="add_blank">
+            <label for="add-blank" style="font-size:15px;">Adicionar página em branco ao final de cada PDF com número ímpar de páginas</label>
+          </div>
+          <div style="margin: 12px 0 18px 0;">
+            <label for="output-name" style="font-size:15px;">Nome do arquivo final:</label>
+            <input type="text" id="output-name" name="output_name" placeholder="merged.pdf" style="width:100%;padding:6px 8px;border-radius:4px;border:1px solid #ccc;">
+          </div>
+        </form>
+      </div>
+      <div class="split-panel">
+        <h2 style="text-align:center;">2. Ordenar e Mesclar</h2>
+        <div id="order-instructions" style="margin:10px 0 5px 0; color:#555; font-size:14px;">
+          <span>Arraste <span style="font-size:18px;vertical-align:middle;">&#x2630;</span> para ordenar os arquivos antes de mesclar.</span>
+        </div>
+        <form id="order-form" method="post" enctype="multipart/form-data">
+          <ul id="pdf-list" style="list-style:none;padding:0;"></ul>
+          <input type="hidden" name="order[]" id="order-hidden">
+          <input type="hidden" name="add_blank" id="order-add-blank">
+          <input type="hidden" name="output_name" id="order-output-name">
+          <button type="submit" style="margin-top:18px;width:100%;">Mesclar PDFs</button>
+        </form>
+      </div>
+      <div id="toast" style="display:none;"></div>
+      <script>
+      // Sincroniza arquivos do upload para a lista de ordenação
+      let uploadedFiles = [];
+      const toast = document.getElementById('toast');
+      let toastTimeout = null;
+      function showFeedback(msg, type) {
+        toast.textContent = msg;
+        toast.className = 'toast ' + (type || 'info');
+        toast.style.display = 'block';
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => {
+            toast.style.display = 'none';
+            toast.style.opacity = '';
+          }, 400);
+        }, 3500);
+      }
+      function clearFeedback() {
+        toast.style.display = 'none';
+        toast.textContent = '';
+        toast.className = 'toast';
+      }
+      document.getElementById('pdf-input').addEventListener('change', function(e) {
+        uploadedFiles = Array.from(this.files);
+        renderList();
+        clearFeedback();
+      });
+      document.getElementById('add-blank').addEventListener('change', function(e) {
+        document.getElementById('order-add-blank').value = this.checked ? 'on' : '';
+      });
+      document.getElementById('output-name').addEventListener('input', function(e) {
+        document.getElementById('order-output-name').value = this.value;
+      });
+      function renderList() {
+        const list = document.getElementById('pdf-list');
+        list.innerHTML = '';
+        uploadedFiles.forEach((file, idx) => {
+          const li = document.createElement('li');
+          li.innerHTML = '<span class="drag-icon">&#x2630;</span> ' + file.name;
+          li.draggable = true;
+          li.dataset.index = idx;
+          list.appendChild(li);
+        });
+        makeListSortable(list);
+      }
+      function makeListSortable(list) {
+        let dragSrcEl = null;
+        list.addEventListener('dragstart', function(e) {
+          if (e.target.tagName !== 'LI') return;
+          dragSrcEl = e.target;
+          e.target.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        list.addEventListener('dragend', function(e) {
+          if (e.target.tagName !== 'LI') return;
+          e.target.classList.remove('dragging');
+        });
+        list.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          const afterElement = getDragAfterElement(list, e.clientY);
+          const dragging = list.querySelector('.dragging');
+          if (afterElement == null) {
+            list.appendChild(dragging);
+          } else {
+            list.insertBefore(dragging, afterElement);
+          }
+        });
+        function getDragAfterElement(list, y) {
+          const draggableElements = [...list.querySelectorAll('li:not(.dragging)')];
+          return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+              return { offset: offset, element: child };
+            } else {
+              return closest;
+            }
+          }, { offset: -Infinity }).element;
+        }
+      }
+      // Ao submeter, envia os arquivos na ordem escolhida
+      document.getElementById('order-form').addEventListener('submit', function(e) {
+        if (uploadedFiles.length === 0) {
+          showFeedback('Selecione ao menos um arquivo PDF ou DOC.', 'error');
+          e.preventDefault();
+          return false;
+        }
+        showFeedback('Enviando e processando arquivos, aguarde...', 'info');
+        const list = document.getElementById('pdf-list');
+        const order = Array.from(list.children).map(li => li.dataset.index);
+        // Cria um novo FormData para enviar os arquivos na ordem correta
+        const formData = new FormData();
+        order.forEach(idx => {
+          formData.append('pdfs', uploadedFiles[idx]);
+        });
+        formData.append('add_blank', document.getElementById('add-blank').checked ? 'on' : '');
+        formData.append('output_name', document.getElementById('output-name').value);
+        fetch('/', {
+          method: 'POST',
+          body: formData
+        }).then(resp => {
+          if (resp.ok) return resp.blob();
+          else return resp.text().then(msg => { throw new Error(msg); });
+        }).then(blob => {
+          showFeedback('PDF mesclado com sucesso! Baixando arquivo...', 'success');
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          let outName = document.getElementById('output-name').value.trim() || 'merged.pdf';
+          if (!outName.toLowerCase().endsWith('.pdf')) outName += '.pdf';
+          a.download = outName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        }).catch(err => {
+          showFeedback('Erro ao mesclar PDFs: ' + err.message, 'error');
+        });
+        e.preventDefault();
+        return false;
+      });
+      </script>
+      <style>
+      #toast.toast {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 220px;
+        max-width: 350px;
+        z-index: 9999;
+        background: #f4f4f4;
+        color: #333;
+        border-radius: 6px;
+        box-shadow: 0 2px 16px #0002;
+        padding: 14px 22px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        opacity: 1;
+        transition: opacity 0.4s;
+        pointer-events: none;
+      }
+      #toast.toast.error {
+        background: #ffeaea;
+        color: #b00;
+        border-color: #b00;
+      }
+      #toast.toast.success {
+        background: #eaffea;
+        color: #080;
+        border-color: #080;
+      }
+      #toast.toast.info {
+        background: #f4f4f4;
+        color: #333;
+        border-color: #ccc;
+      }
+      #pdf-list li {
+        background: #f8f8f8;
+        margin-bottom: 6px;
+        padding: 8px 12px 8px 32px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        position: relative;
+        cursor: grab;
+        transition: background 0.2s, box-shadow 0.2s;
+      }
+      #pdf-list li.dragging {
+        background: #e0e7ff;
+        box-shadow: 0 2px 8px #0002;
+        opacity: 0.7;
+      }
+      #pdf-list li .drag-icon {
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+        color: #888;
+        cursor: grab;
+      }
+      </style>
+    </div>
+</body>
+</html>
