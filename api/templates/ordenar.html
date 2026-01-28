@@ -1,72 +1,92 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Ordenar PDFs</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
     <div class="container">
-        <h1>Ordenar arquivos PDF</h1>
-        <form method="post" id="order-form">
-            <div id="order-instructions" style="margin:10px 0 5px 0; color:#555; font-size:14px;">
-                <span>Arraste <span style="font-size:18px;vertical-align:middle;">&#x2630;</span> para ordenar os arquivos antes de mesclar.</span>
-            </div>
-            <ul id="pdf-list" style="list-style:none;padding:0;">
-                {% for filename in filenames %}
-                <li draggable="true" data-filename="{{ filename }}"><span class="drag-icon">&#x2630;</span> {{ filename }}</li>
-                {% endfor %}
-            </ul>
-            <input type="hidden" name="order[]" id="order-hidden">
-            <button type="submit">Mesclar PDFs</button>
-        </form>
+      <h1>Ordenar arquivos PDF</h1>
+      <form method="post" id="order-form">
+        <div
+          id="order-instructions"
+          style="margin: 10px 0 5px 0; color: #555; font-size: 14px"
+        >
+          <span
+            >Arraste
+            <span style="font-size: 18px; vertical-align: middle"
+              >&#x2630;</span
+            >
+            para ordenar os arquivos antes de mesclar.</span
+          >
+        </div>
+        <ul id="pdf-list" style="list-style: none; padding: 0">
+          {% for filename in filenames %}
+          <li draggable="true" data-filename="{{ filename }}">
+            <span class="drag-icon">&#x2630;</span> {{ filename }}
+          </li>
+          {% endfor %}
+        </ul>
+        <input type="hidden" name="order[]" id="order-hidden" />
+        <button type="submit">Mesclar PDFs</button>
+      </form>
     </div>
     <script>
-    // Drag and drop ordering
-    document.addEventListener('DOMContentLoaded', function() {
-        const list = document.getElementById('pdf-list');
+      // Drag and drop ordering
+      document.addEventListener("DOMContentLoaded", function () {
+        const list = document.getElementById("pdf-list");
         let dragSrcEl = null;
-        list.addEventListener('dragstart', function(e) {
-            if (e.target.tagName !== 'LI') return;
-            dragSrcEl = e.target;
-            e.target.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
+        list.addEventListener("dragstart", function (e) {
+          if (e.target.tagName !== "LI") return;
+          dragSrcEl = e.target;
+          e.target.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
         });
-        list.addEventListener('dragend', function(e) {
-            if (e.target.tagName !== 'LI') return;
-            e.target.classList.remove('dragging');
+        list.addEventListener("dragend", function (e) {
+          if (e.target.tagName !== "LI") return;
+          e.target.classList.remove("dragging");
         });
-        list.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            const afterElement = getDragAfterElement(list, e.clientY);
-            const dragging = list.querySelector('.dragging');
-            if (afterElement == null) {
-                list.appendChild(dragging);
-            } else {
-                list.insertBefore(dragging, afterElement);
-            }
+        list.addEventListener("dragover", function (e) {
+          e.preventDefault();
+          const afterElement = getDragAfterElement(list, e.clientY);
+          const dragging = list.querySelector(".dragging");
+          if (afterElement == null) {
+            list.appendChild(dragging);
+          } else {
+            list.insertBefore(dragging, afterElement);
+          }
         });
         function getDragAfterElement(list, y) {
-            const draggableElements = [...list.querySelectorAll('li:not(.dragging)')];
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            }, { offset: -Infinity }).element;
+          const draggableElements = [
+            ...list.querySelectorAll("li:not(.dragging)"),
+          ];
+          return draggableElements.reduce(
+            (closest, child) => {
+              const box = child.getBoundingClientRect();
+              const offset = y - box.top - box.height / 2;
+              if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+              } else {
+                return closest;
+              }
+            },
+            { offset: -Infinity },
+          ).element;
         }
         // Atualiza o campo hidden com a ordem
-        document.getElementById('order-form').addEventListener('submit', function(e) {
-            const order = Array.from(list.children).map(li => li.getAttribute('data-filename'));
-            document.getElementById('order-hidden').value = order;
-        });
-    });
+        document
+          .getElementById("order-form")
+          .addEventListener("submit", function (e) {
+            const order = Array.from(list.children).map((li) =>
+              li.getAttribute("data-filename"),
+            );
+            document.getElementById("order-hidden").value = order;
+          });
+      });
     </script>
     <style>
-    #pdf-list li {
+      #pdf-list li {
         background: #f8f8f8;
         margin-bottom: 6px;
         padding: 8px 12px 8px 32px;
@@ -74,14 +94,16 @@
         border: 1px solid #ddd;
         position: relative;
         cursor: grab;
-        transition: background 0.2s, box-shadow 0.2s;
-    }
-    #pdf-list li.dragging {
+        transition:
+          background 0.2s,
+          box-shadow 0.2s;
+      }
+      #pdf-list li.dragging {
         background: #e0e7ff;
         box-shadow: 0 2px 8px #0002;
         opacity: 0.7;
-    }
-    #pdf-list li .drag-icon {
+      }
+      #pdf-list li .drag-icon {
         position: absolute;
         left: 8px;
         top: 50%;
@@ -89,7 +111,7 @@
         font-size: 18px;
         color: #888;
         cursor: grab;
-    }
+      }
     </style>
-</body>
+  </body>
 </html>
