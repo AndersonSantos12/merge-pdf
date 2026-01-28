@@ -7,8 +7,8 @@ import io
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
-UPLOAD_FOLDER = 'uploads'
-MERGED_FOLDER = 'merged'
+UPLOAD_FOLDER = '/tmp/uploads'
+MERGED_FOLDER = '/tmp/merged'
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MERGED_FOLDER'] = MERGED_FOLDER
